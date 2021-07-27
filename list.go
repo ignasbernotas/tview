@@ -48,6 +48,9 @@ type List struct {
 	// If true, the selection is only shown when the list has focus.
 	selectedFocusOnly bool
 
+	// If true, navigating the list will select the item
+	selectOnNavigation bool
+
 	// If true, the entire row is highlighted when selected.
 	highlightFullLine bool
 
@@ -145,6 +148,14 @@ func (l *List) SetOffset(items, horizontal int) *List {
 // information on these values.
 func (l *List) GetOffset() (int, int) {
 	return l.itemOffset, l.horizontalOffset
+}
+
+// SetSelectOnNavigation sets the flag that determines whether navigating the list will
+// select the focused item
+func (l *List) SetSelectOnNavigation(selectOnNav bool) *List {
+	l.selectOnNavigation = selectOnNav
+
+	return l
 }
 
 // RemoveItem removes the item with the given index (starting at 0) from the
@@ -534,6 +545,18 @@ func (l *List) Draw(screen tcell.Screen) {
 	l.overflowing = overflowing
 }
 
+func (l *List) selectFocusedItem() {
+	if l.currentItem >= 0 && l.currentItem < len(l.items) {
+		item := l.items[l.currentItem]
+		if item.Selected != nil {
+			item.Selected()
+		}
+		if l.selected != nil {
+			l.selected(l.currentItem, item.MainText, item.SecondaryText, item.Shortcut)
+		}
+	}
+}
+
 // InputHandler returns the handler for this primitive.
 func (l *List) InputHandler() func(event *tcell.EventKey, setFocus func(p Primitive)) {
 	return l.WrapInputHandler(func(event *tcell.EventKey, setFocus func(p Primitive)) {
@@ -551,8 +574,14 @@ func (l *List) InputHandler() func(event *tcell.EventKey, setFocus func(p Primit
 		switch key := event.Key(); key {
 		case tcell.KeyTab, tcell.KeyDown:
 			l.currentItem++
+			if l.selectOnNavigation {
+				l.selectFocusedItem()
+			}
 		case tcell.KeyBacktab, tcell.KeyUp:
 			l.currentItem--
+			if l.selectOnNavigation {
+				l.selectFocusedItem()
+			}
 		case tcell.KeyRight:
 			if l.overflowing {
 				l.horizontalOffset += 2 // We shift by 2 to account for two-cell characters.
