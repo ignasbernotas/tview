@@ -62,6 +62,9 @@ type List struct {
 	// are not affected.
 	horizontalOffset int
 
+	// Whether or not to allow scrolling past the selected item
+	selectedItemInView bool
+
 	// Set to true if a currently visible item flows over the right border of
 	// the box. This is set by the Draw() function. It determines the behaviour
 	// of the right arrow key.
@@ -85,6 +88,7 @@ func NewList() *List {
 		Box:                     NewBox(),
 		showSecondaryText:       true,
 		wrapAround:              true,
+		selectedItemInView:      true,
 		mainTextColor:           Styles.PrimaryTextColor,
 		secondaryTextColor:      Styles.TertiaryTextColor,
 		shortcutColor:           Styles.SecondaryTextColor,
@@ -145,6 +149,14 @@ func (l *List) SetOffset(items, horizontal int) *List {
 // information on these values.
 func (l *List) GetOffset() (int, int) {
 	return l.itemOffset, l.horizontalOffset
+}
+
+// SetSelectedInView sets the flag that determines whether scrolling the list will
+// scroll around the selected item, or will allow scrolling past it
+func (l *List) SetSelectedInView(allow bool) *List {
+	l.selectedItemInView = allow
+
+	return l
 }
 
 // RemoveItem removes the item with the given index (starting at 0) from the
@@ -442,17 +454,20 @@ func (l *List) Draw(screen tcell.Screen) {
 	}
 
 	// Adjust offset to keep the current selection in view.
-	if l.currentItem < l.itemOffset {
-		l.itemOffset = l.currentItem
-	} else if l.showSecondaryText {
-		if 2*(l.currentItem-l.itemOffset) >= height-1 {
-			l.itemOffset = (2*l.currentItem + 3 - height) / 2
-		}
-	} else {
-		if l.currentItem-l.itemOffset >= height {
-			l.itemOffset = l.currentItem + 1 - height
+	if l.selectedItemInView {
+		if l.currentItem < l.itemOffset {
+			l.itemOffset = l.currentItem
+		} else if l.showSecondaryText {
+			if 2*(l.currentItem-l.itemOffset) >= height-1 {
+				l.itemOffset = (2*l.currentItem + 3 - height) / 2
+			}
+		} else {
+			if l.currentItem-l.itemOffset >= height {
+				l.itemOffset = l.currentItem + 1 - height
+			}
 		}
 	}
+
 	if l.horizontalOffset < 0 {
 		l.horizontalOffset = 0
 	}
