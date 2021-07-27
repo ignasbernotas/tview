@@ -125,6 +125,14 @@ func (l *List) SetCurrentItem(index int) *List {
 
 	l.currentItem = index
 
+	item := l.items[l.currentItem]
+	if item.Selected != nil {
+		item.Selected()
+	}
+	if l.selected != nil {
+		l.selected(l.currentItem, item.MainText, item.SecondaryText, item.Shortcut)
+	}
+
 	return l
 }
 
