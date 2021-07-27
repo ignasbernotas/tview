@@ -63,7 +63,7 @@ type List struct {
 	horizontalOffset int
 
 	// Whether or not to allow scrolling past the selected item
-	selectedItemInView bool
+	keepSelectedItemInView bool
 
 	// Set to true if a currently visible item flows over the right border of
 	// the box. This is set by the Draw() function. It determines the behaviour
@@ -88,7 +88,7 @@ func NewList() *List {
 		Box:                     NewBox(),
 		showSecondaryText:       true,
 		wrapAround:              true,
-		selectedItemInView:      true,
+		keepSelectedItemInView:  true,
 		mainTextColor:           Styles.PrimaryTextColor,
 		secondaryTextColor:      Styles.TertiaryTextColor,
 		shortcutColor:           Styles.SecondaryTextColor,
@@ -151,10 +151,10 @@ func (l *List) GetOffset() (int, int) {
 	return l.itemOffset, l.horizontalOffset
 }
 
-// SetSelectedInView sets the flag that determines whether scrolling the list will
+// KeepSelectedItemInView sets the flag that determines whether scrolling the list will
 // scroll around the selected item, or will allow scrolling past it
-func (l *List) SetSelectedInView(allow bool) *List {
-	l.selectedItemInView = allow
+func (l *List) KeepSelectedItemInView(keep bool) *List {
+	l.keepSelectedItemInView = keep
 
 	return l
 }
@@ -453,8 +453,8 @@ func (l *List) Draw(screen tcell.Screen) {
 		}
 	}
 
-	// Adjust offset to keep the current selection in view.
-	if l.selectedItemInView {
+	if l.keepSelectedItemInView {
+		// Adjust offset to keep the current selection in view.
 		if l.currentItem < l.itemOffset {
 			l.itemOffset = l.currentItem
 		} else if l.showSecondaryText {
