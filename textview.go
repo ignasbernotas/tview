@@ -45,6 +45,8 @@ type textViewRegion struct {
 	FromX, FromY, ToX, ToY int
 }
 
+type regionClickFunc func(id string)
+
 // TextView is a box which displays text. It implements the io.Writer interface
 // so you can stream text to it. This does not trigger a redraw automatically
 // but if a handler is installed via SetChangedFunc(), you can cause it to be
@@ -174,6 +176,9 @@ type TextView struct {
 
 	// If set to true, region tags can be used to define regions.
 	regions bool
+
+	// If defined, a region click will trigger this callback
+	regionClick regionClickFunc
 
 	// A temporary flag which, when true, will automatically bring the current
 	// highlight(s) into the visible screen.
@@ -332,6 +337,13 @@ func (t *TextView) SetRegions(regions bool) *TextView {
 		t.index = nil
 	}
 	t.regions = regions
+	return t
+}
+
+// SetRegionClickCallback sets a region click callback
+func (t *TextView) SetRegionClickFunc(callback regionClickFunc) *TextView {
+	t.regionClick = callback
+
 	return t
 }
 
@@ -533,7 +545,7 @@ func (t *TextView) ScrollToHighlight() *TextView {
 //
 // If the region does not exist or if regions are turned off, an empty string
 // is returned.
-func (t *TextView) GetRegionText(regionID string) string {
+func (t *TextView) GetRegionText(regionID string, skipColors bool) string {
 	if !t.regions || regionID == "" {
 		return ""
 	}
@@ -563,16 +575,17 @@ func (t *TextView) GetRegionText(regionID string) string {
 		// Analyze this line.
 		var currentTag, currentRegion int
 		for pos, ch := range str {
-			// Skip any color tags.
-			if currentTag < len(colorTagIndices) && pos >= colorTagIndices[currentTag][0] && pos < colorTagIndices[currentTag][1] {
-				if pos == colorTagIndices[currentTag][1]-1 {
-					currentTag++
-				}
-				if colorTagIndices[currentTag][1]-colorTagIndices[currentTag][0] > 2 {
-					continue
+			if skipColors {
+				// Skip any color tags.
+				if currentTag < len(colorTagIndices) && pos >= colorTagIndices[currentTag][0] && pos < colorTagIndices[currentTag][1] {
+					if pos == colorTagIndices[currentTag][1]-1 {
+						currentTag++
+					}
+					if colorTagIndices[currentTag][1]-colorTagIndices[currentTag][0] > 2 {
+						continue
+					}
 				}
 			}
-
 			// Skip any regions.
 			if currentRegion < len(regionIndices) && pos >= regionIndices[currentRegion][0] && pos < regionIndices[currentRegion][1] {
 				if pos == regionIndices[currentRegion][1]-1 {
@@ -1241,7 +1254,11 @@ func (t *TextView) MouseHandler() func(action MouseAction, event *tcell.EventMou
 						region.ToY >= 0 && y > region.ToY {
 						continue
 					}
-					t.Highlight(region.ID)
+					if t.regionClick != nil {
+						t.regionClick(t.GetRegionText(region.ID, false))
+					} else {
+						t.Highlight(region.ID)
+					}
 					break
 				}
 			}
