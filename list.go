@@ -2,9 +2,8 @@ package tview
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/gdamore/tcell/v2"
+	"strings"
 )
 
 // listItem represents one item in a List.
@@ -124,7 +123,7 @@ func (l *List) SetCurrentItem(index int) *List {
 	}
 
 	l.currentItem = index
-
+	l.scrollToSelected()
 	item := l.items[l.currentItem]
 	if item.Selected != nil {
 		item.Selected()
@@ -134,6 +133,13 @@ func (l *List) SetCurrentItem(index int) *List {
 	}
 
 	return l
+}
+
+// scroll to
+func (l *List) scrollToSelected() {
+	_, _, _, height := l.GetInnerRect()
+
+	l.itemOffset = l.currentItem - height/2
 }
 
 // GetCurrentItem returns the index of the currently selected list item,
@@ -597,13 +603,24 @@ func (l *List) InputHandler() func(event *tcell.EventKey, setFocus func(p Primit
 
 		switch key := event.Key(); key {
 		case tcell.KeyTab, tcell.KeyDown:
-			l.currentItem++
+			if l.currentItem == len(l.items)-1 {
+				l.currentItem = 0
+			} else {
+				l.currentItem++
+			}
+
 			if l.selectOnNavigation {
+				l.scrollToSelected()
 				l.selectFocusedItem()
 			}
 		case tcell.KeyBacktab, tcell.KeyUp:
-			l.currentItem--
+			if l.currentItem == 0 {
+				l.currentItem = len(l.items) - 1
+			} else {
+				l.currentItem--
+			}
 			if l.selectOnNavigation {
+				l.scrollToSelected()
 				l.selectFocusedItem()
 			}
 		case tcell.KeyRight:
