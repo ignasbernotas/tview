@@ -123,7 +123,7 @@ func (l *List) SetCurrentItem(index int) *List {
 	}
 
 	l.currentItem = index
-	l.scrollToSelected()
+	l.ScrollToSelected()
 	item := l.items[l.currentItem]
 	if item.Selected != nil {
 		item.Selected()
@@ -135,8 +135,8 @@ func (l *List) SetCurrentItem(index int) *List {
 	return l
 }
 
-// scroll to
-func (l *List) scrollToSelected() {
+// scroll to currently selected item
+func (l *List) ScrollToSelected() {
 	_, _, _, height := l.GetInnerRect()
 
 	l.itemOffset = l.currentItem - height/2
@@ -610,7 +610,7 @@ func (l *List) InputHandler() func(event *tcell.EventKey, setFocus func(p Primit
 			}
 
 			if l.selectOnNavigation {
-				l.scrollToSelected()
+				l.ScrollToSelected()
 				l.selectFocusedItem()
 			}
 		case tcell.KeyBacktab, tcell.KeyUp:
@@ -620,7 +620,7 @@ func (l *List) InputHandler() func(event *tcell.EventKey, setFocus func(p Primit
 				l.currentItem--
 			}
 			if l.selectOnNavigation {
-				l.scrollToSelected()
+				l.ScrollToSelected()
 				l.selectFocusedItem()
 			}
 		case tcell.KeyRight:
@@ -720,9 +720,17 @@ func (l *List) indexAtPoint(x, y int) int {
 	if l.showSecondaryText {
 		index /= 2
 	}
-	index += l.itemOffset
+	offset := l.itemOffset
+	// TODO hack, sometimes after 3rd party code selects an element offset becomes too large
+	if offset < 1 {
+		offset = 0
+	}
+	index += offset
 
 	if index >= len(l.items) {
+		return -1
+	}
+	if index < 0 {
 		return -1
 	}
 	return index
